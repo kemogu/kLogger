@@ -4,7 +4,7 @@
 ![C++ Version](https://img.shields.io/badge/C%2B%2B-17-green.svg)
 ![Structure](https://img.shields.io/badge/structure-header--only-brightgreen.svg)
 
-**[English](#-klogger-english) | [Türkçe](#-klogger-türkçe)**
+**[English](#klogger-english) | [Türkçe](#klogger-türkçe)**
 
 ---
 
