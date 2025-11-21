@@ -7,10 +7,10 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-vscode.cpptools",          // C/C++ Intellisense & Debugging
+                "ms-vscode.cpptools",
                 "ms-vscode.cpptools-extension-pack",
-                "twxs.cmake",                  // CMake desteği
-                "ms-vscode.cmake-tools"        // CMake Tools
+                "twxs.cmake",
+                "ms-vscode.cmake-tools"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "bash"
