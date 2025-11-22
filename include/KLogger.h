@@ -70,11 +70,8 @@ namespace KL {
                 if (true == writeToFile) {
                     write_to_file(msg);
                 }
-
-
-
-                // TODO: Add color codes.
-
+                
+                write_to_terminal(level, msg);
             } // End function log
         private:
 
@@ -158,7 +155,14 @@ namespace KL {
             } // End function get_color_code
 
             void write_to_terminal(Level level, const std::string& msg) {
-                // TODO: Write write_to_terminal method.
+                std::string colorCode = get_color_code(level);
+                std::string coloredMsg = colorCode + msg + Color::RESET;
+
+                if (Level::ERROR == level) {
+                    std::cerr << coloredMsg << std::endl;
+                } else {
+                    std::cout << coloredMsg << std::endl;
+                }
             } // End function write_to_terminal
 
             std::mutex mMutex;
