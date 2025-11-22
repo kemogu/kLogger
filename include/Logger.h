@@ -9,21 +9,13 @@
 #include <mutex>        // For adding lines to files and writing stream to terminal
 
 #include "Level.h"
-
+#include "Color.h"
 
 // TODO: Add queue logic.
 // TODO: Add worker thread logic.
 // TODO: Add filename validation.
 
 namespace KL {
-    namespace Color {
-        // ANSI escape codes.
-        static const std::string RED     = "\033[31m";
-        static const std::string GREEN   = "\033[32m";
-        static const std::string YELLOW  = "\033[33m";
-        static const std::string RESET   = "\033[0m";
-    };
-
     class Logger {
         public:
             /**
@@ -44,6 +36,7 @@ namespace KL {
              */
             void init(const std::string& folderPath = "", size_t maxLinesPerFile = 100000) {
                 std::lock_guard<std::mutex> lock(mMutex);
+                if (true == mIsInitialized) return;
 
                 mMaxLines = maxLinesPerFile;
 
@@ -56,7 +49,7 @@ namespace KL {
                         std::filesystem::create_directories(mLogDirectory);
                     }
                 }
-
+                
                 mIsInitialized = true;
             } // End function init
 
