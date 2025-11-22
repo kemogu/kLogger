@@ -55,11 +55,11 @@ namespace KL {
             void log(Level level, const std::string& msg, bool writeToFile) {
                 std::lock_guard<std::mutex> lock(mMutex);
 
-                // TODO: Add time stamp.
                 std::string timeStampStr = get_time_stamp();
                 std::string levelStr = level_to_string(level);
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
 
+                // TODO: Add color codes.
 
             } // End function log
         private:
