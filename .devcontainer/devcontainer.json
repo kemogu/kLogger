@@ -10,7 +10,8 @@
                 "ms-vscode.cpptools",
                 "ms-vscode.cpptools-extension-pack",
                 "twxs.cmake",
-                "ms-vscode.cmake-tools"
+                "ms-vscode.cmake-tools",
+                "gruntfuggly.todo-tree"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "bash"
