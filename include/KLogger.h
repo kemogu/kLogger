@@ -68,10 +68,10 @@ namespace KL {
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
 
                 if (true == writeToFile) {
-                    write_to_file(msg);
+                    write_to_file(formattedMsg);
                 }
                 
-                write_to_terminal(level, msg);
+                write_to_terminal(level, formattedMsg);
             } // End function log
         private:
 
