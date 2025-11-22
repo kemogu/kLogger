@@ -10,6 +10,7 @@
 
 #include "Level.h"
 #include "Color.h"
+#include "LogEntry.h"
 
 // TODO: Add queue logic.
 // TODO: Add worker thread logic.
@@ -49,7 +50,7 @@ namespace KL {
                         std::filesystem::create_directories(mLogDirectory);
                     }
                 }
-                
+
                 mIsInitialized = true;
             } // End function init
 
