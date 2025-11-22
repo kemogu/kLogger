@@ -8,19 +8,14 @@
 #include <filesystem>   // For creating and reading path, files (NOTE: Reguired C++ 17)
 #include <mutex>        // For adding lines to files and writing stream to terminal
 
+#include "Level.h"
+
 
 // TODO: Add queue logic.
 // TODO: Add worker thread logic.
 // TODO: Add filename validation.
 
 namespace KL {
-    
-    enum class Level {
-        INFO,
-        WARNING,
-        ERROR
-    };
-
     namespace Color {
         // ANSI escape codes.
         static const std::string RED     = "\033[31m";
