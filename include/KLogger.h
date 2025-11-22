@@ -56,6 +56,8 @@ namespace KL {
                 std::lock_guard<std::mutex> lock(mMutex);
 
                 // TODO: Add time stamp.
+                std::string timeStamp = get_time_stamp();
+                std::string levelString = level_to_string(level);
 
 
             } // End function log
