@@ -56,8 +56,9 @@ namespace KL {
                 std::lock_guard<std::mutex> lock(mMutex);
 
                 // TODO: Add time stamp.
-                std::string timeStamp = get_time_stamp();
-                std::string levelString = level_to_string(level);
+                std::string timeStampStr = get_time_stamp();
+                std::string levelStr = level_to_string(level);
+                std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
 
 
             } // End function log
@@ -93,6 +94,20 @@ namespace KL {
 
                 return ss.str();
             } // End function get_time_stamp
+
+            /**
+             * @brief
+             * 
+             * @param
+             * @param
+             * @param
+             * 
+             * @return formatted message
+             */
+            std::string get_formatted_message(const std::string& timeStampStr, const std::string& levelStr, const std::string& msgStr) {
+                std::string formattedStr = "[" + timeStampStr + "]" + "[" + levelStr + "]" + "[" + msgStr + "]";
+                return formattedStr;
+            } // End function get_formatted_message
 
             std::mutex mMutex;
             std::ofstream mFileStream;
