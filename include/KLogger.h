@@ -8,6 +8,11 @@
 #include <filesystem>   // For creating and reading path, files (NOTE: Reguired C++ 17)
 #include <mutex>        // For adding lines to files and writing stream to terminal
 
+
+// TODO: Add queue logic.
+// TODO: Add worker thread logic.
+// TODO: Add filename validation.
+
 namespace KL {
     
     enum class Level {
