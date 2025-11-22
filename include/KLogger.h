@@ -60,6 +60,7 @@ namespace KL {
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
 
                 // TODO: Add color codes.
+                // TODO: Handle file operations.
 
             } // End function log
         private:
