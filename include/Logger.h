@@ -1,5 +1,5 @@
-#ifndef KLOGGER_H
-#define KLOGGER_H
+#ifndef LOGGER_H
+#define LOGGER_H
 
 #include <iostream>     // For I/O operations
 #include <string>       // For text operations   
@@ -179,4 +179,4 @@ namespace KL {
     };
 }
 
-#endif //! KLOGGER_H
+#endif //! LOGGER_H
