@@ -77,6 +77,10 @@ namespace KL {
                 if (mFileStream.is_open()) mFileStream.close();
             } // End function ~Logger
 
+            void shut_down() {
+                // TODO: Write shut_down function.
+            } // End function shut_down
+
             std::string level_to_string(Level level) {
                 switch (level) {
                     case Level::INFO: return "INFO";
@@ -150,12 +154,12 @@ namespace KL {
 
             void write_to_terminal(Level level, const std::string& msg) {
                 std::string colorCode = get_color_code(level);
-                std::string coloredMsg = colorCode + msg + Color::RESET;
+                std::string coloredMsg = colorCode + msg + Color::RESET + "/n";
 
                 if (Level::ERROR == level) {
-                    std::cerr << coloredMsg << std::endl;
+                    std::cerr << coloredMsg;
                 } else {
-                    std::cout << coloredMsg << std::endl;
+                    std::cout << coloredMsg;
                 }
             } // End function write_to_terminal
 
