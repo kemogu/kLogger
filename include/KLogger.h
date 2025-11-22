@@ -78,6 +78,11 @@ namespace KL {
                 }
             } // End function level_to_string
 
+            /**
+             * @brief This function return the date and timestamp.
+             * 
+             * @return time stamp
+             */
             std::string get_time_stamp() {
                 std::chrono::time_point now = std::chrono::system_clock::now();
                 auto inTime = std::chrono::system_clock::to_time_t(now);
