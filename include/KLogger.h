@@ -67,8 +67,11 @@ namespace KL {
                 std::string levelStr = level_to_string(level);
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
 
+                if (true == writeToFile) {
+                    write_to_file(msg);
+                }
+
                 // TODO: Add color codes.
-                // TODO: Handle file operations.
 
             } // End function log
         private:
@@ -117,6 +120,22 @@ namespace KL {
                 std::string formattedStr = "[" + timeStampStr + "]" + "[" + levelStr + "]" + "[" + msgStr + "]";
                 return formattedStr;
             } // End function get_formatted_message
+
+            void create_new_file() {
+                // TODO: Write creating file logic.
+            } // End function create_new_file
+
+            void write_to_file(const std::string& msg) {
+                bool needNewFile = ((false == mFileStream.is_open()) || mCurrentLineCount >= mMaxLines);
+                if (true == needNewFile) {
+                    create_new_file();
+                }
+
+                if (true == mFileStream.is_open()) {
+                    mFileStream << msg << std::endl;
+                    mCurrentLineCount ++;
+                }
+            } // End function write_to_file
 
             std::mutex mMutex;
             std::ofstream mFileStream;
