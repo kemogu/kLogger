@@ -18,10 +18,10 @@ namespace KL {
 
     namespace Color {
         // ANSI escape codes.
-        const std::string RED     = "\033[31m";
-        const std::string GREEN   = "\033[32m";
-        const std::string YELLOW  = "\033[33m";
-        const std::string RESET   = "\033[0m";
+        inline const std::string RED     = "\033[31m";
+        inline const std::string GREEN   = "\033[32m";
+        inline const std::string YELLOW  = "\033[33m";
+        inline const std::string RESET   = "\033[0m";
     };
 
     class Logger {
@@ -140,7 +140,7 @@ namespace KL {
                 }
 
                 if (true == mFileStream.is_open()) {
-                    mFileStream << msg << std::endl;
+                    mFileStream << msg << "\n";
                     mCurrentLineCount ++;
                 }
             } // End function write_to_file
