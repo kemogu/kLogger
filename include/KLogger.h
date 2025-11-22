@@ -71,6 +71,8 @@ namespace KL {
                     write_to_file(msg);
                 }
 
+
+
                 // TODO: Add color codes.
 
             } // End function log
@@ -145,6 +147,19 @@ namespace KL {
                     mCurrentLineCount ++;
                 }
             } // End function write_to_file
+
+            std::string get_color_code(Level level) {
+                switch (level) {
+                    case Level::INFO:       return Color::GREEN;
+                    case Level::WARNING:    return Color::YELLOW;
+                    case Level::ERROR:      return Color::RED;
+                    default:                return "";
+                }
+            } // End function get_color_code
+
+            void write_to_terminal(Level level, const std::string& msg) {
+                // TODO: Write write_to_terminal method.
+            } // End function write_to_terminal
 
             std::mutex mMutex;
             std::ofstream mFileStream;
