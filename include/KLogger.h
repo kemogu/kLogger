@@ -57,6 +57,7 @@ namespace KL {
 
                 // TODO: Add time stamp.
 
+
             } // End function log
         private:
 
@@ -76,6 +77,15 @@ namespace KL {
                     default: return "UNKNOWN";
                 }
             } // End function level_to_string
+
+            std::string get_time_stamp() {
+                std::chrono::time_point now = std::chrono::system_clock::now();
+                auto inTime = std::chrono::system_clock::to_time_t(now);
+                std::stringstream ss;
+                ss << std::put_time(std::localtime(&inTime), "%d.%m.%Y %H:%M:%S");
+
+                return ss.str();
+            } // End function get_time_stamp
 
             std::mutex mMutex;
             std::ofstream mFileStream;
