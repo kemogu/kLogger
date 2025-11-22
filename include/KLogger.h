@@ -102,7 +102,7 @@ namespace KL {
                 std::chrono::time_point now = std::chrono::system_clock::now();
                 auto inTime = std::chrono::system_clock::to_time_t(now);
                 std::stringstream ss;
-                ss << std::put_time(std::localtime(&inTime), "%d.%m.%Y %H:%M:%S");
+                ss << std::put_time(std::localtime(&inTime), "%d.%m.%Y-%H:%M:%S");
 
                 return ss.str();
             } // End function get_time_stamp
@@ -122,7 +122,16 @@ namespace KL {
             } // End function get_formatted_message
 
             void create_new_file() {
-                // TODO: Write creating file logic.
+                if (mFileStream.is_open()) {
+                    mFileStream.close();
+                }
+
+                std::string timeStampStr = get_time_stamp();
+                std::string fileName = "klog_" + timeStampStr + ".txt";
+                std::filesystem::path fullPath = mLogDirectory / fileName;
+
+                mFileStream.open(fullPath, std::ios::out | std::ios::app);
+                mCurrentLineCount = 0;
             } // End function create_new_file
 
             void write_to_file(const std::string& msg) {
