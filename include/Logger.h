@@ -181,7 +181,7 @@ namespace KL {
 
             void write_to_terminal(Level level, const std::string& msg) {
                 std::string colorCode = get_color_code(level);
-                std::string coloredMsg = colorCode + msg + Color::RESET + "/n";
+                std::string coloredMsg = colorCode + msg + Color::RESET + "\n";
 
                 if (Level::ERROR == level) {
                     std::cerr << coloredMsg;
