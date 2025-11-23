@@ -99,14 +99,28 @@ namespace KL {
              * @return time stamp
              */
             std::string get_time_stamp() {
-                // TODO: Add milisecond.
-                // TODO: Add compatibility.
-                std::chrono::time_point now = std::chrono::system_clock::now();
-                auto inTime = std::chrono::system_clock::to_time_t(now);
-                std::stringstream ss;
-                ss << std::put_time(std::localtime(&inTime), "%d.%m.%Y %H:%M:%S");
+                const auto now = std::chrono::system_clock::now();
+                const auto inTime = std::chrono::system_clock::to_time_t(now);
+                const auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+                const auto ms = msSinceEpoch % 1000;
 
-                return ss.str();
+                std::tm buf{};
+                #if defined(_WIN32)
+                    if (localtime_s(&buf, &in_time_t) != 0) {
+                        throw std::runtime_error("localtime_s failed");
+                    }
+                #else
+                    if (localtime_r(&inTime, &buf) == nullptr) {
+                        throw std::runtime_error("localtime_r failed");
+                    }
+                #endif
+                
+                // Formatted D-M-Y H:M:S.MS
+                std::ostringstream oss;
+                oss << std::put_time(&buf, "%d-%m-%Y %H:%M:%S");
+                oss << '.' << std::setw(3) << std::setfill('0') << ms.count();
+
+                return oss.str();
             } // End function get_time_stamp
 
             /**
