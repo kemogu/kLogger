@@ -55,6 +55,7 @@ namespace KL {
                 }
 
                 mIsInitialized = true;
+                mIsRunning = true;
             } // End function init
 
             void log(Level level, const std::string& msg, bool writeToFile) {
@@ -183,6 +184,10 @@ namespace KL {
                     std::cout << coloredMsg;
                 }
             } // End function write_to_terminal
+
+            void process_queue() {
+                // TODO: Add process queue method.
+            } // End function process_queue
             
             std::queue<LogEntry> mLogEntryQueue;
             std::condition_variable mCV;
