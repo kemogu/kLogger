@@ -76,7 +76,7 @@ namespace KL {
         private:
 
             // Default constructor 
-            Logger() : mCurrentLineCount(0), mMaxLines(100000), mIsInitialized(false) {}
+            Logger() : mCurrentLineCount(0), mMaxLines(100000), mIsInitialized(false), mIsRunning(false) {}
             
             // Destructor
             ~Logger() {
