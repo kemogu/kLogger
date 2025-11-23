@@ -18,7 +18,6 @@
 #include "LogEntry.h"
 
 // TODO: Add worker thread logic.
-// TODO: Add filename validation.
 
 namespace KL {
     class Logger {
