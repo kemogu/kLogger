@@ -56,6 +56,7 @@ namespace KL {
 
                 mIsInitialized = true;
                 mIsRunning = true;
+                mWorkerThread = std::thread(&Logger::process_queue, this);
             } // End function init
 
             void log(Level level, const std::string& msg, bool writeToFile) {
@@ -69,15 +70,8 @@ namespace KL {
                 log.writeToFile = writeToFile;
                 log.level = level;
                 log.msg = formattedMsg;
-                log.timeStamp = timeStampStr;
 
-                // TODO: Add queue to logs.
-
-                if (true == writeToFile) {
-                    write_to_file(formattedMsg);
-                }
-                
-                write_to_terminal(level, formattedMsg);
+                mLogEntryQueue.push(log);
             } // End function log
         private:
 
@@ -215,10 +209,15 @@ namespace KL {
 
                     if (localQueue.empty()) continue;
 
-                    // TODO: Handle write_enrty block.
-                }
+                    LogEntry log = std::move(localQueue.front());
+                    localQueue.pop();
 
-                
+                    if (log.writeToFile)
+                        write_to_file(log.msg);
+                    else
+                        write_to_terminal(log.level, log.msg);
+
+                }                
             } // End function process_queue
             
             std::queue<LogEntry> mLogEntryQueue;
