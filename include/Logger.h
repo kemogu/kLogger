@@ -138,10 +138,11 @@ namespace KL {
             } // End function get_formatted_message
 
             void create_new_file() {
+                // TODO: Add replace functions.
                 if (mFileStream.is_open()) {
                     mFileStream.close();
                 }
-
+                
                 std::string timeStampStr = get_time_stamp();
                 std::string fileName = "klog_" + timeStampStr + ".txt";
                 std::filesystem::path fullPath = mLogDirectory / fileName;
