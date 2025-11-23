@@ -65,6 +65,14 @@ namespace KL {
                 std::string levelStr = level_to_string(level);
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
 
+                LogEntry log;
+                log.writeToFile = writeToFile;
+                log.level = level;
+                log.msg = formattedMsg;
+                log.timeStamp = timeStampStr;
+
+                // TODO: Add queue to logs.
+
                 if (true == writeToFile) {
                     write_to_file(formattedMsg);
                 }
