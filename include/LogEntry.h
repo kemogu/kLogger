@@ -9,7 +9,6 @@ namespace KL {
         bool writeToFile;
         Level level;
         std::string msg;
-        std::string timeStamp;
     };
 }
 
