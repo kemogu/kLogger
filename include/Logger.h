@@ -70,6 +70,7 @@ namespace KL {
                 log.msg = formattedMsg;
 
                 mLogEntryQueue.push(log);
+                mCV.notify_one();
             } // End function log
         private:
 
