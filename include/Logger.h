@@ -58,18 +58,19 @@ namespace KL {
             } // End function init
 
             void log(Level level, const std::string& msg, bool writeToFile) {
-                std::lock_guard<std::mutex> lock(mMutex);
-
                 std::string timeStampStr = get_time_stamp();
                 std::string levelStr = level_to_string(level);
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
-
-                LogEntry log;
-                log.writeToFile = writeToFile;
-                log.level = level;
-                log.msg = formattedMsg;
-
-                mLogEntryQueue.push(log);
+                
+                {
+                    std::lock_guard<std::mutex> lock(mMutex);
+                    LogEntry log;
+                    log.writeToFile = writeToFile;
+                    log.level = level;
+                    log.msg = formattedMsg;
+    
+                    mLogEntryQueue.push(log);
+                }
                 mCV.notify_one();
             } // End function log
         private:
