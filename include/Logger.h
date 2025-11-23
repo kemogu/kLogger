@@ -99,7 +99,7 @@ namespace KL {
                 std::chrono::time_point now = std::chrono::system_clock::now();
                 auto inTime = std::chrono::system_clock::to_time_t(now);
                 std::stringstream ss;
-                ss << std::put_time(std::localtime(&inTime), "%d.%m.%Y-%H:%M:%S");
+                ss << std::put_time(std::localtime(&inTime), "%d.%m.%Y %H:%M:%S");
 
                 return ss.str();
             } // End function get_time_stamp
