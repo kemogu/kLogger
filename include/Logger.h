@@ -144,6 +144,8 @@ namespace KL {
             } // End function get_formatted_message
 
             void create_new_file() {
+                // TODO: Add try-catch block.
+                
                 if (mFileStream.is_open()) {
                     mFileStream.close();
                 }
