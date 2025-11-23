@@ -10,6 +10,7 @@
 #include <mutex>                // For adding lines to files and writing stream to terminal
 #include <queue>                // For working thread logic.
 #include <condition_variable>   // For awake to worker thread.
+#include <atomic>               // For wake and awake to worker thread.
 
 #include "Level.h"
 #include "Color.h"
@@ -169,6 +170,10 @@ namespace KL {
             std::queue<LogEntry> mLogEntryQueue;
             std::condition_variable mCV;
             std::mutex mMutex;
+            std::thread mWorkerThread;
+            std::atomic<bool> mIsRunning;
+            std::atomic<bool> mIsInitialized;
+
             std::ofstream mFileStream;
             std::filesystem::path mLogDirectory;
             size_t mMaxLines;
