@@ -17,8 +17,6 @@
 #include "Color.h"
 #include "LogEntry.h"
 
-// TODO: Add worker thread logic.
-
 namespace KL {
     class Logger {
         public:
