@@ -111,7 +111,7 @@ namespace KL {
 
                 std::tm buf{};
                 #if defined(_WIN32)
-                    if (localtime_s(&buf, &in_time_t) != 0) {
+                    if (localtime_s(&buf, &inTime) != 0) {
                         throw std::runtime_error("localtime_s failed");
                     }
                 #else
