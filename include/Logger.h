@@ -190,7 +190,6 @@ namespace KL {
             } // End function write_to_terminal
 
             void process_queue() {
-                // TODO: Add process queue method.
                 std::queue<LogEntry> localQueue;
                 while (true) {
                     
@@ -208,14 +207,15 @@ namespace KL {
 
                     if (localQueue.empty()) continue;
 
-                    LogEntry log = std::move(localQueue.front());
-                    localQueue.pop();
-
-                    if (log.writeToFile)
-                        write_to_file(log.msg);
-                    else
-                        write_to_terminal(log.level, log.msg);
-
+                    while (!localQueue.empty()) {
+                        LogEntry log = std::move(localQueue.front());
+                        localQueue.pop();
+    
+                        if (log.writeToFile)
+                            write_to_file(log.msg);
+                        else
+                            write_to_terminal(log.level, log.msg);
+                    }
                 }                
             } // End function process_queue
             
