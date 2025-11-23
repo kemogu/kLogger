@@ -7,12 +7,12 @@
 #include <fstream>      // For file operations
 #include <filesystem>   // For creating and reading path, files (NOTE: Reguired C++ 17)
 #include <mutex>        // For adding lines to files and writing stream to terminal
+#include <queue>        // For working thread logic.
 
 #include "Level.h"
 #include "Color.h"
 #include "LogEntry.h"
 
-// TODO: Add queue logic.
 // TODO: Add worker thread logic.
 // TODO: Add filename validation.
 
@@ -162,7 +162,8 @@ namespace KL {
                     std::cout << coloredMsg;
                 }
             } // End function write_to_terminal
-
+            
+            std::queue<LogEntry> mLogEntryQueue;
             std::mutex mMutex;
             std::ofstream mFileStream;
             std::filesystem::path mLogDirectory;
