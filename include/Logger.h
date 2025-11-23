@@ -78,11 +78,14 @@ namespace KL {
             
             // Destructor
             ~Logger() {
-                if (mFileStream.is_open()) mFileStream.close();
+                shut_down();
             } // End function ~Logger
 
             void shut_down() {
-                // TODO: Write shut_down function.
+                mIsRunning = false;
+                mCV.notify_all();
+                if (mWorkerThread.joinable()) mWorkerThread.join();
+                if (mFileStream.is_open()) mFileStream.close();
             } // End function shut_down
 
             std::string level_to_string(Level level) {
