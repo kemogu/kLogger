@@ -1,13 +1,15 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <iostream>     // For I/O operations
-#include <string>       // For text operations   
-#include <chrono>       // For time timestamp
-#include <fstream>      // For file operations
-#include <filesystem>   // For creating and reading path, files (NOTE: Reguired C++ 17)
-#include <mutex>        // For adding lines to files and writing stream to terminal
-#include <queue>        // For working thread logic.
+#include <iostream>             // For I/O operations
+#include <string>               // For text operations   
+#include <chrono>               // For time timestamp
+#include <fstream>              // For file operations
+#include <filesystem>           // For creating and reading path, files (NOTE: Reguired C++ 17)
+#include <thread>               // For worker thread logic.
+#include <mutex>                // For adding lines to files and writing stream to terminal
+#include <queue>                // For working thread logic.
+#include <condition_variable>   // For awake to worker thread.
 
 #include "Level.h"
 #include "Color.h"
@@ -165,6 +167,7 @@ namespace KL {
             } // End function write_to_terminal
             
             std::queue<LogEntry> mLogEntryQueue;
+            std::condition_variable mCV;
             std::mutex mMutex;
             std::ofstream mFileStream;
             std::filesystem::path mLogDirectory;
