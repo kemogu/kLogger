@@ -6,6 +6,7 @@
 
 namespace KL {
     struct LogEntry {
+        bool writeToFile;
         Level level;
         std::string msg;
         std::string timeStamp;
