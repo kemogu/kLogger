@@ -58,6 +58,7 @@ namespace KL {
             } // End function init
 
             void log(Level level, const std::string& msg, bool writeToFile) {
+                // TODO: Add assert about initializing.
                 std::string timeStampStr = get_time_stamp();
                 std::string levelStr = level_to_string(level);
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
@@ -145,7 +146,7 @@ namespace KL {
 
             void create_new_file() {
                 // TODO: Add try-catch block.
-                
+
                 if (mFileStream.is_open()) {
                     mFileStream.close();
                 }
