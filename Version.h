@@ -6,6 +6,6 @@
 // [M] -> Major Chances
 // [F] -> Functional updating
 // [D] -> Debugging
-#define VERSION "0.0.6.4"
+#define VERSION "0.0.7.0"
 
 #endif //!VERSION
