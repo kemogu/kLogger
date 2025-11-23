@@ -190,6 +190,27 @@ namespace KL {
 
             void process_queue() {
                 // TODO: Add process queue method.
+                std::queue<LogEntry> localQueue;
+                while (true) {
+                    
+                    {
+                        std::unique_lock<std::mutex> lock(mMutex);
+                        mCV.wait(lock, [this] {
+                            return !mLogEntryQueue.empty() || !mIsRunning;
+                        });
+    
+                        bool shouldWorkerThreadWork = (!mIsRunning && mLogEntryQueue.empty());
+                        if (shouldWorkerThreadWork) break;
+    
+                        std::swap(localQueue, mLogEntryQueue);
+                    }
+
+                    if (localQueue.empty()) continue;
+
+                    // TODO: Handle write_enrty block.
+                }
+
+                
             } // End function process_queue
             
             std::queue<LogEntry> mLogEntryQueue;
