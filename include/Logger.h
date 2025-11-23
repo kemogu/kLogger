@@ -178,7 +178,6 @@ namespace KL {
             std::filesystem::path mLogDirectory;
             size_t mMaxLines;
             size_t mCurrentLineCount;
-            bool mIsInitialized;
     };
 }
 
