@@ -96,6 +96,7 @@ namespace KL {
              * @return time stamp
              */
             std::string get_time_stamp() {
+                // TODO: Add milisecond.
                 std::chrono::time_point now = std::chrono::system_clock::now();
                 auto inTime = std::chrono::system_clock::to_time_t(now);
                 std::stringstream ss;
