@@ -11,6 +11,7 @@
 #include <queue>                // For working thread logic.
 #include <condition_variable>   // For awake to worker thread.
 #include <atomic>               // For wake and awake to worker thread.
+#include <algorithm>            // For replace function.
 
 #include "Level.h"
 #include "Color.h"
@@ -138,12 +139,13 @@ namespace KL {
             } // End function get_formatted_message
 
             void create_new_file() {
-                // TODO: Add replace functions.
                 if (mFileStream.is_open()) {
                     mFileStream.close();
                 }
                 
                 std::string timeStampStr = get_time_stamp();
+                std::replace(timeStampStr.begin(), timeStampStr.end(), ":", "-");
+                std::replace(timeStampStr.begin(), timeStampStr.end(), " ", "-");
                 std::string fileName = "klog_" + timeStampStr + ".txt";
                 std::filesystem::path fullPath = mLogDirectory / fileName;
 
