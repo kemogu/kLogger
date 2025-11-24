@@ -155,8 +155,8 @@ namespace KL {
                     }
                     
                     std::string timeStampStr = get_time_stamp();
-                    std::replace(timeStampStr.begin(), timeStampStr.end(), ":", "-");
-                    std::replace(timeStampStr.begin(), timeStampStr.end(), " ", "-");
+                    std::replace(timeStampStr.begin(), timeStampStr.end(), ':', '-');
+                    std::replace(timeStampStr.begin(), timeStampStr.end(), ' ', '-');
                     std::string fileName = "klog_" + timeStampStr + ".txt";
                     std::filesystem::path fullPath = mLogDirectory / fileName;
 
