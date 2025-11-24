@@ -12,6 +12,7 @@
 #include <condition_variable>   // For awake to worker thread.
 #include <atomic>               // For wake and awake to worker thread.
 #include <algorithm>            // For replace function.
+#include <iomanip>              // For std::put_time, std::setw, std::setfill
 
 #include "Level.h"
 #include "Color.h"
