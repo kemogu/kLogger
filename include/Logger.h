@@ -36,8 +36,8 @@ namespace KL {
 
             /**
              * @brief
-             * @param folderPath
-             * @param maxLinesPerFile
+             * @param folderPath Default value current path.
+             * @param maxLinesPerFile Default value 100.000.
              */
             void init(const std::string& folderPath = "", size_t maxLinesPerFile = 100000) {
                 std::lock_guard<std::mutex> lock(mMutex);
@@ -60,11 +60,13 @@ namespace KL {
                 mWorkerThread = std::thread(&Logger::process_queue, this);
             } // End function init
 
-            void log(Level level, const std::string& msg, bool writeToFile) {
+            void log(Level level, std::string msg, bool writeToFile) {
                 
-                if (false == mIsInitialized)
-                    throw std::runtime_error("Logger didn't initialized.");
-
+                if (false == mIsInitialized) {
+                    std::cout << "Logger initializing with default values. " << "\n"; 
+                    init();
+                }
+                    
                 auto now = std::chrono::system_clock::now();  
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
