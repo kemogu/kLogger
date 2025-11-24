@@ -20,6 +20,10 @@
 #include "Color.h"
 #include "LogEntry.h"
 
+// TODO: Add tests.
+// TODO: Write header only cmake.
+// TODO: Do it benchmark.
+
 namespace KL {
     /**
      * @class Logger
