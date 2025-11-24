@@ -145,20 +145,24 @@ namespace KL {
             } // End function get_formatted_message
 
             void create_new_file() {
-                // TODO: Add try-catch block.
+                try {
+                    if (mFileStream.is_open()) {
+                        mFileStream.close();
+                    }
+                    
+                    std::string timeStampStr = get_time_stamp();
+                    std::replace(timeStampStr.begin(), timeStampStr.end(), ":", "-");
+                    std::replace(timeStampStr.begin(), timeStampStr.end(), " ", "-");
+                    std::string fileName = "klog_" + timeStampStr + ".txt";
+                    std::filesystem::path fullPath = mLogDirectory / fileName;
 
-                if (mFileStream.is_open()) {
-                    mFileStream.close();
+                    mFileStream.open(fullPath, std::ios::out | std::ios::app);
+                    mCurrentLineCount = 0;
                 }
-                
-                std::string timeStampStr = get_time_stamp();
-                std::replace(timeStampStr.begin(), timeStampStr.end(), ":", "-");
-                std::replace(timeStampStr.begin(), timeStampStr.end(), " ", "-");
-                std::string fileName = "klog_" + timeStampStr + ".txt";
-                std::filesystem::path fullPath = mLogDirectory / fileName;
-
-                mFileStream.open(fullPath, std::ios::out | std::ios::app);
-                mCurrentLineCount = 0;
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
+                }
             } // End function create_new_file
 
             void write_to_file(const std::string& msg) {
