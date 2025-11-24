@@ -58,7 +58,10 @@ namespace KL {
             } // End function init
 
             void log(Level level, const std::string& msg, bool writeToFile) {
-                // TODO: Add assert about initializing.
+                
+                if (false == mIsInitialized)
+                    throw std::runtime_error("Logger didn't initialized.");
+
                 std::string timeStampStr = get_time_stamp();
                 std::string levelStr = level_to_string(level);
                 std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
