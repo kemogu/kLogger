@@ -21,10 +21,24 @@
 #include "LogEntry.h"
 
 namespace KL {
+    /**
+     * @class Logger
+     * 
+     * @brief A thread-safe, asynchronous Logger class implemented using the Singleton pattern.
+     * 
+     * This logger supports writing to both the console (with colors) and rotating log files.
+     * It utilizes a worker thread to process log entries from a queue to avoid blocking
+     * the main execution thread.
+     */
     class Logger {
         public:
             /**
-             * @brief Meyers' Singleton Pattern
+             * @brief Retrieves the singleton instance of the Logger.
+             * 
+             * Implements Meyers' Singleton Pattern to ensure only one instance exists
+             * and is initialized safely.
+             * 
+             * @return Logger& Reference to the static Logger instance.
              */
             static Logger& get_instance() {
                 static Logger instance;
@@ -35,9 +49,13 @@ namespace KL {
             Logger& operator=(const Logger&) = delete;
 
             /**
-             * @brief
-             * @param folderPath Default value current path.
-             * @param maxLinesPerFile Default value 100.000.
+             * @brief Initializes the logger configuration and starts the worker thread.
+             * 
+             * If the folder path is not provided, the current working directory is used.
+             * Creates the directory if it does not exist.
+             * 
+             * @param folderPath Path to the directory where log files will be stored. Default is current path.
+             * @param maxLinesPerFile Maximum number of lines per log file before rotation. Default is 100,000.
              */
             void init(const std::string& folderPath = "", size_t maxLinesPerFile = 100000) {
                 std::lock_guard<std::mutex> lock(mMutex);
@@ -60,6 +78,16 @@ namespace KL {
                 mWorkerThread = std::thread(&Logger::process_queue, this);
             } // End function init
 
+            /**
+             * @brief Pushes a new log message to the processing queue.
+             * 
+             * This method is thread-safe. If the logger is not initialized, 
+             * it attempts to initialize it with default values.
+             * 
+             * @param level The severity level of the log (INFO, WARNING, ERROR).
+             * @param msg The actual log message.
+             * @param writeToFile Flag indicating whether this message should be written to the file.
+             */
             void log(Level level, std::string msg, bool writeToFile) {
                 
                 if (false == mIsInitialized) {
@@ -83,14 +111,23 @@ namespace KL {
             ~Logger() {
                 shut_down();
             } // End function ~Logger
-
+            
+            /**
+             * @brief Stops the worker thread and closes the open file stream.
+             */
             void shut_down() {
                 mIsRunning = false;
                 mCV.notify_all();
                 if (mWorkerThread.joinable()) mWorkerThread.join();
                 if (mFileStream.is_open()) mFileStream.close();
             } // End function shut_down
-
+            
+            /**
+             * @brief Converts the Log Level enum to its string representation.
+             * 
+             * @param level The Level enum value.
+             * @return std::string String representation (e.g., "INFO").
+             */
             std::string level_to_string(Level level) {
                 switch (level) {
                     case Level::INFO: return "INFO";
@@ -162,20 +199,25 @@ namespace KL {
             } // End function get_time_stamp_for_log
 
             /**
-             * @brief
+             * @brief Formats the log message for final output.
              * 
-             * @param
-             * @param
-             * @param
+             * Combines timestamp, level, and message body.
+             * Example: [Date-Time][INFO][Message]
              * 
-             * @return formatted message
+             * @param log The LogEntry to format.
+             * @return std::string The fully formatted log string.
              */
             std::string get_formatted_message(const LogEntry& log) {
                 std::ostringstream formattedMsg;
                 formattedMsg << "[" << get_time_stamp_for_log(log) << "]" << "[" << level_to_string(log.level) << "]" << "[" << log.msg << "]";
                 return formattedMsg.str();
             } // End function get_formatted_message
-
+            
+            /**
+             * @brief Closes the current file (if open) and creates a new one with a timestamped name.
+             * 
+             * The filename format is: klog_d-m-y-H-M-S.MS.txt
+             */
             void create_new_file() {
                 try {
                     if (mFileStream.is_open()) {
@@ -196,7 +238,14 @@ namespace KL {
                     std::cerr << e.what() << '\n';
                 }
             } // End function create_new_file
-
+            
+            /**
+             * @brief Writes the formatted message to the log file.
+             * 
+             * Handles file rotation if the maximum line count is reached or the file is closed.
+             * 
+             * @param msg The formatted message string.
+             */
             void write_to_file(const std::string& msg) {
                 bool needNewFile = ((false == mFileStream.is_open()) || mCurrentLineCount >= mMaxLines);
                 if (true == needNewFile) {
@@ -208,7 +257,13 @@ namespace KL {
                     mCurrentLineCount ++;
                 }
             } // End function write_to_file
-
+            
+            /**
+             * @brief Retrieves the ANSI color code corresponding to the log level.
+             * 
+             * @param level The log level.
+             * @return std::string ANSI color escape code.
+             */
             std::string get_color_code(Level level) {
                 switch (level) {
                     case Level::INFO:       return Color::GREEN;
@@ -217,7 +272,16 @@ namespace KL {
                     default:                return "";
                 }
             } // End function get_color_code
-
+            
+            /**
+             * @brief Writes the formatted message to the standard output (Terminal).
+             * 
+             * Applies color coding based on the severity level. 
+             * ERROR level uses std::cerr, others use std::cout.
+             * 
+             * @param level The log level (determines color and stream).
+             * @param msg The formatted message string.
+             */
             void write_to_terminal(Level level, const std::string& msg) {
                 std::string colorCode = get_color_code(level);
                 std::string coloredMsg = colorCode + msg + Color::RESET + "\n";
@@ -229,6 +293,13 @@ namespace KL {
                 }
             } // End function write_to_terminal
 
+            /**
+             * @brief The main loop for the worker thread.
+             * 
+             * Continuously waits for log entries in the queue. When awakened,
+             * it swaps the queue to a local buffer (for minimal lock duration)
+             * and processes the logs by writing to file and/or terminal.
+             */
             void process_queue() {
                 std::queue<LogEntry> localQueue;
                 while (true) {
@@ -259,17 +330,17 @@ namespace KL {
                 }                
             } // End function process_queue
             
-            std::queue<LogEntry> mLogEntryQueue;
-            std::condition_variable mCV;
-            std::mutex mMutex;
-            std::thread mWorkerThread;
-            std::atomic<bool> mIsRunning;
-            std::atomic<bool> mIsInitialized;
+            std::queue<LogEntry> mLogEntryQueue;    // Queue to hold pending log entries.
+            std::condition_variable mCV;            // Condition variable to wake up worker thread.
+            std::mutex mMutex;                      // Mutex for thread safety.
+            std::thread mWorkerThread;              // Background thread for processing logs.
+            std::atomic<bool> mIsRunning;           // Atomic flag to control the worker loop.
+            std::atomic<bool> mIsInitialized;       // Atomic flag to check initialization status.
 
-            std::ofstream mFileStream;
-            std::filesystem::path mLogDirectory;
-            size_t mMaxLines;
-            size_t mCurrentLineCount;
+            std::ofstream mFileStream;              // File stream for writing logs.
+            std::filesystem::path mLogDirectory;    // Directory path for log files.
+            size_t mMaxLines;                       // Max lines per file limit.
+            size_t mCurrentLineCount;               // Current line count in the active file.
     };
 }
 
