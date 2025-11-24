@@ -65,18 +65,10 @@ namespace KL {
                 if (false == mIsInitialized)
                     throw std::runtime_error("Logger didn't initialized.");
 
-                std::string timeStampStr = get_time_stamp();
-                std::string levelStr = level_to_string(level);
-                std::string formattedMsg = get_formatted_message(timeStampStr, levelStr, msg);
-                
+                auto now = std::chrono::system_clock::now();  
                 {
                     std::lock_guard<std::mutex> lock(mMutex);
-                    LogEntry log;
-                    log.writeToFile = writeToFile;
-                    log.level = level;
-                    log.msg = formattedMsg;
-    
-                    mLogEntryQueue.push(log);
+                    mLogEntryQueue.push(LogEntry{ writeToFile, now, level, std::move(msg) });
                 }
                 mCV.notify_one();
             } // End function log
@@ -105,13 +97,13 @@ namespace KL {
                     default: return "UNKNOWN";
                 }
             } // End function level_to_string
-
+            
             /**
-             * @brief This function return the date and timestamp.
+             * @brief This function returns date and timestamp according now.
              * 
              * @return time stamp
              */
-            std::string get_time_stamp() {
+            std::string get_time_stamp_for_now() {
                 const auto now = std::chrono::system_clock::now();
                 const auto inTime = std::chrono::system_clock::to_time_t(now);
                 const auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
@@ -134,7 +126,38 @@ namespace KL {
                 oss << '.' << std::setw(3) << std::setfill('0') << ms.count();
 
                 return oss.str();
-            } // End function get_time_stamp
+            }
+
+            /**
+             * @brief This function returns the date and timestamp according to log entry.
+             * 
+             * @param log
+             * 
+             * @return time stamp
+             */
+            std::string get_time_stamp_for_log(const LogEntry& log) {
+                const auto inTime = std::chrono::system_clock::to_time_t(log.timeStamp);
+                const auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(log.timeStamp.time_since_epoch());
+                const auto ms = msSinceEpoch % 1000;
+
+                std::tm buf{};
+                #if defined(_WIN32)
+                    if (localtime_s(&buf, &inTime) != 0) {
+                        throw std::runtime_error("localtime_s failed");
+                    }
+                #else
+                    if (localtime_r(&inTime, &buf) == nullptr) {
+                        throw std::runtime_error("localtime_r failed");
+                    }
+                #endif
+                
+                // Formatted D-M-Y H:M:S.MS
+                std::ostringstream oss;
+                oss << std::put_time(&buf, "%d-%m-%Y %H:%M:%S");
+                oss << '.' << std::setw(3) << std::setfill('0') << ms.count();
+
+                return oss.str();
+            } // End function get_time_stamp_for_log
 
             /**
              * @brief
@@ -145,9 +168,9 @@ namespace KL {
              * 
              * @return formatted message
              */
-            std::string get_formatted_message(const std::string& timeStampStr, const std::string& levelStr, const std::string& msgStr) {
+            std::string get_formatted_message(const LogEntry& log) {
                 std::ostringstream formattedMsg;
-                formattedMsg << "[" << timeStampStr << "]" << "[" << levelStr << "]" << "[" << msgStr << "]";
+                formattedMsg << "[" << get_time_stamp_for_log(log) << "]" << "[" << level_to_string(log.level) << "]" << "[" << log.msg << "]";
                 return formattedMsg.str();
             } // End function get_formatted_message
 
@@ -157,7 +180,7 @@ namespace KL {
                         mFileStream.close();
                     }
                     
-                    std::string timeStampStr = get_time_stamp();
+                    std::string timeStampStr = get_time_stamp_for_now();
                     std::replace(timeStampStr.begin(), timeStampStr.end(), ':', '-');
                     std::replace(timeStampStr.begin(), timeStampStr.end(), ' ', '-');
                     std::string fileName = "klog_" + timeStampStr + ".txt";
@@ -225,10 +248,11 @@ namespace KL {
                     while (!localQueue.empty()) {
                         LogEntry log = std::move(localQueue.front());
                         localQueue.pop();
-    
+                        
+                        std::string formattedMessage = get_formatted_message(log);
                         if (log.writeToFile)
-                            write_to_file(log.msg);
-                        write_to_terminal(log.level, log.msg);
+                            write_to_file(formattedMessage);
+                        write_to_terminal(log.level, formattedMessage);
                     }
                 }                
             } // End function process_queue
