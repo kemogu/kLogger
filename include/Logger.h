@@ -144,8 +144,9 @@ namespace KL {
              * @return formatted message
              */
             std::string get_formatted_message(const std::string& timeStampStr, const std::string& levelStr, const std::string& msgStr) {
-                std::string formattedStr = "[" + timeStampStr + "]" + "[" + levelStr + "]" + "[" + msgStr + "]";
-                return formattedStr;
+                std::ostringstream formattedMsg;
+                formattedMsg << "[" << timeStampStr << "]" << "[" << levelStr << "]" << "[" << msgStr << "]";
+                return formattedMsg.str();
             } // End function get_formatted_message
 
             void create_new_file() {
