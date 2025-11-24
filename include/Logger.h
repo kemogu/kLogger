@@ -225,8 +225,7 @@ namespace KL {
     
                         if (log.writeToFile)
                             write_to_file(log.msg);
-                        else
-                            write_to_terminal(log.level, log.msg);
+                        write_to_terminal(log.level, log.msg);
                     }
                 }                
             } // End function process_queue
