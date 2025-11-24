@@ -2,8 +2,10 @@
 #define LOGGER_H
 
 #include <iostream>             // For I/O operations
-#include <string>               // For text operations   
+#include <string>               // For text operations
+#include <sstream>              // For std::stringstream   
 #include <chrono>               // For time timestamp
+#include <ctime>                // For localtime functions
 #include <fstream>              // For file operations
 #include <filesystem>           // For creating and reading path, files (NOTE: Reguired C++ 17)
 #include <thread>               // For worker thread logic.
