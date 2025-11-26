@@ -16,7 +16,7 @@
 
 * **Header-Only:** No compilation needed. Just include the headers and you're ready to go.
 * **Lightweight & Fast:** Designed with performance-critical applications in mind.
-* **Multi-level:** Standard logging levels (`DEBUG`, `INFO`, `WARN`, `ERROR`, `CRITICAL`).
+* **Multi-level:** Standard logging levels (`INFO`, `WARNING`, `ERROR`).
 * **Flexible Formatting:** Easily customize the format of your log messages.
 * **Thread-Safe:** Safe to use in multi-threaded applications.
 * **Multiple Sinks:** Direct logs to the console, files, or [other targets].
@@ -26,46 +26,81 @@
 ### 🚀 Getting Started
 
 #### Requirements
+* **C++17** compiler or newer.
+* CMake 3.15+ (for integration).
 
-* A **C++17** (or newer) compatible compiler (GCC, Clang, MSVC).
+#### Installation & Integration
 
-#### Installation
+**Option 1: Submodule / Add Subdirectory (Recommended)**
 
-`kLogger` is a **header-only** library. No build process is required.
+1.  Add kLogger to your project (e.g., inside `external/` folder):
+    ```bash
+    git submodule add [https://github.com/kemogu/kLogger.git](https://github.com/kemogu/kLogger.git) external/kLogger
+    ```
 
-1.  **Download:** Clone the repository or download the latest release.
+2.  Update your `CMakeLists.txt`:
+    ```cmake
+    add_subdirectory(external/kLogger)
+    
+    add_executable(MyApp main.cpp)
+    target_link_libraries(MyApp PRIVATE kLogger)
+    ```
+
+**Option 2: System-Wide Install**
+
+1.  Build and install:
     ```bash
     git clone [https://github.com/kemogu/kLogger.git](https://github.com/kemogu/kLogger.git)
+    cd kLogger && mkdir build && cd build
+    cmake ..
+    sudo cmake --install .
     ```
-2.  **Include:** Add the `kLogger/include` directory to your project's include path.
 
-**CMake Example (in your `CMakeLists.txt`):**
+2.  Use in `CMakeLists.txt`:
+    ```cmake
+    find_package(kLogger REQUIRED)
+    add_executable(MyApp main.cpp)
+    target_link_libraries(MyApp PRIVATE kLogger::kLogger)
+    ```
 
-Simply tell CMake where to find the headers.
+### 💻 Usage
 
-```cmake
-# Add this to your CMakeLists.txt
-# (Assuming you've placed the kLogger repo in your project's 'lib' folder)
-target_include_directories(YOUR_PROJECT_NAME PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/kLogger/include
-)
+Include the main header (or `kLogger.h`) and initialize the logger once at the start of your application.
 
-# That's it! Now you can #include "kLogger/Logger.h" in your source files.
+```cpp
+#include <KL/kLogger.h> // Includes Logger.h automatically
+
+int main() {
+    // 1. Initialize Logger (Optional: default path is current dir)
+    // Args: Folder Path, Max Lines Per File
+    KL::Logger::get_instance().init("logs", 5000);
+
+    // 2. Console ONLY Logging (Fastest)
+    LOG_INFO("Application started (Console only)");
+    LOG_WARNING("This is a warning");
+    
+    // 3. File AND Console Logging
+    FLOG_INFO("This goes to both console and the log file.");
+    FLOG_ERROR("Critical error occurred! Saved to file.");
+
+    // Note: The logger shuts down automatically when the program ends.
+    return 0;
+}
 ```
 ---
 
 ## kLogger (Türkçe)
 
-**kLogger (kemogu's Logger)**, C++ için yazılmış hızlı, modern ve esnek bir **header-only** (sadece başlık dosyası) günlükleme (logging) kütüphanesidir. Bu proje, geliştiricilere yüksek performanslı, okunması kolay ve herhangi bir C++ uygulamasına minimum çabayla entegre edilebilen bir günlükleme çözümü sunmayı amaçlamaktadır.
+**kLogger (kemogu's Logger)**, C++ için yazılmış hızlı, modern ve esnek bir **header-only** (yalnızca başlık dosyalarından oluşan) günlükleme (logging) kütüphanesidir. Bu proje, geliştiricilere yüksek performanslı, okunması kolay ve herhangi bir C++ uygulamasına minimum çabayla entegre edilebilen bir günlükleme çözümü sunmayı amaçlar.
 
 ### ✨ Özellikler
 
-*   **Header-Only:** Derleme gerektirmez. Sadece başlık dosyalarını dahil edin ve kullanmaya başlayın.
-*   **Hafif ve Hızlı:** Performansın kritik olduğu uygulamalar düşünülerek tasarlanmıştır.
-*   **Çok Seviyeli:** Standart günlükleme seviyeleri (`DEBUG`, `INFO`, `WARN`, `ERROR`, `CRITICAL`).
-*   **Esnek Formatlama:** Günlük mesajlarınızın formatını kolayca özelleştirin.
-*   **Thread-Safe (İş Parçacığı Güvenli):** Çok iş parçacıklı (multi-threaded) uygulamalarda güvenle kullanılabilir.
-*   **Çoklu Hedef (Sink):** Günlükleri konsola, dosyalara veya [diğer hedeflere] yönlendirin.
+* **Header-Only:** Ekstra derleme adımı gerektirmez. Başlık dosyalarını projeye eklemeniz yeterlidir.
+* **Hafif ve Hızlı:** Performansın kritik olduğu uygulamalar düşünülerek tasarlanmıştır.
+* **Çok Seviyeli:** Standart günlükleme seviyeleri (`INFO`, `WARNING`, `ERROR`).
+* **Esnek Formatlama:** Log mesajlarının formatını kolayca özelleştirebilirsiniz.
+* **Thread-Safe (İş Parçacığı Güvenli):** Çok iş parçacıklı (multi-threaded) uygulamalarda güvenle kullanılabilir.
+* **Çoklu Hedef (Sink):** Log’ları konsola, dosyalara veya [diğer hedeflere] yönlendirebilirsiniz.
 
 ---
 
@@ -73,28 +108,77 @@ target_include_directories(YOUR_PROJECT_NAME PUBLIC
 
 #### Gereksinimler
 
-*   **C++17** (veya daha yeni) uyumlu bir derleyici (GCC, Clang, MSVC).
+* **C++17** (veya daha yeni) uyumlu bir derleyici (GCC, Clang, MSVC vb.)
+* **CMake 3.15+** (projeye entegre etmek için)
 
-#### Kurulum
+---
 
-`kLogger`, bir **header-only** kütüphanedir. Herhangi bir derleme işlemi gerektirmez.
+### 🧩 Kurulum & Entegrasyon
 
-1.  **İndirme:** Depoyu klonlayın veya en son sürümü indirin.
+kLogger, **header-only** bir kütüphane olmasına rağmen CMake ile rahat entegrasyon için bir yapı sunar. Aşağıdaki yöntemlerden birini kullanabilirsiniz.
+
+#### Seçenek 1: Submodule / add_subdirectory (Önerilen)
+
+1.  kLogger’ı projenize ekleyin (örneğin `external/` klasörü altına):
     ```bash
-    git clone https://github.com/KULLANICI_ADINIZ/kLogger.git
+    git submodule add https://github.com/kemogu/kLogger.git external/kLogger
     ```
-2.  **Dahil Etme:** `kLogger/include` dizinini projenizin dahil etme yoluna (include path) ekleyin.
 
-**CMake Örneği (`CMakeLists.txt` dosyanız için):**
+2.  `CMakeLists.txt` dosyanızı güncelleyin:
+    ```cmake
+    add_subdirectory(external/kLogger)
 
-CMake'e başlık dosyalarını nerede bulacağını söylemeniz yeterlidir.
+    add_executable(MyApp main.cpp)
+    target_link_libraries(MyApp PRIVATE kLogger)
+    ```
 
-```cmake
-# Bunu CMakeLists.txt dosyanıza ekleyin
-# (kLogger deposunu projenizin 'lib' klasörüne yerleştirdiğinizi varsayarsak)
-target_include_directories(PROJE_ADINIZ PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/kLogger/include
-)
+Bu yöntemle kLogger, projenizin bir parçası gibi derlenir ve CMake hedefi (`kLogger`) üzerinden bağlanır.
 
-# Hepsi bu kadar! Artık kaynak dosyalarınızda #include "kLogger/Logger.h" kullanabilirsiniz.
+---
+
+#### Seçenek 2: Sistem Genelinde Kurulum
+
+1.  Depoyu klonlayın ve kurun:
+    ```bash
+    git clone https://github.com/kemogu/kLogger.git
+    cd kLogger && mkdir build && cd build
+    cmake ..
+    sudo cmake --install .
+    ```
+
+2.  Projenizde `find_package` kullanarak kLogger’ı bulun:
+    ```cmake
+    find_package(kLogger REQUIRED)
+
+    add_executable(MyApp main.cpp)
+    target_link_libraries(MyApp PRIVATE kLogger::kLogger)
+    ```
+
+Bu yöntemle kLogger, sisteminizde global olarak kurulur ve bir CMake paketi olarak kullanılabilir.
+
+---
+
+### 💻 Kullanım
+
+Uygulamanızın başlangıcında ana başlığı (veya doğrudan `kLogger.h` dosyasını) dahil edip logger’ı bir kez başlatmanız yeterlidir.
+
+```cpp
+#include <KL/kLogger.h> // Logger.h dosyasını da otomatik olarak dahil eder
+
+int main() {
+    // 1. Logger'ı başlatın (Opsiyonel: varsayılan klasör, çalıştığınız dizindir)
+    // Argümanlar: Klasör Yolu, Dosya Başına Maksimum Satır Sayısı
+    KL::Logger::get_instance().init("logs", 5000);
+
+    // 2. Sadece Konsola Log (En hızlı yöntem)
+    LOG_INFO("Uygulama başlatıldı (Sadece konsol)");
+    LOG_WARNING("Bu bir uyarı mesajıdır");
+
+    // 3. Dosya + Konsol Log
+    FLOG_INFO("Bu mesaj hem konsola hem de log dosyasına yazılır.");
+    FLOG_ERROR("Kritik bir hata oluştu! Dosyaya kaydedildi.");
+
+    // Not: Program sona erdiğinde logger otomatik olarak kapanır.
+    return 0;
+}
 ```
