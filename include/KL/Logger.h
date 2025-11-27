@@ -119,7 +119,10 @@ namespace KL {
                 mIsRunning = false;
                 mCV.notify_all();
                 if (mWorkerThread.joinable()) mWorkerThread.join();
-                if (mFileStream.is_open()) mFileStream.close();
+                if (mFileStream.is_open()) {
+                    mFileStream.flush();
+                    mFileStream.close();  
+                } 
             } // End function shut_down
             
             /**
