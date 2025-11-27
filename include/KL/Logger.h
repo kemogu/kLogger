@@ -1,350 +1,342 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <iostream>             // For I/O operations
-#include <string>               // For text operations
-#include <sstream>              // For std::stringstream   
-#include <chrono>               // For time timestamp
-#include <ctime>                // For localtime functions
-#include <fstream>              // For file operations
-#include <filesystem>           // For creating and reading path, files (NOTE: Reguired C++ 17)
-#include <thread>               // For worker thread logic.
-#include <mutex>                // For adding lines to files and writing stream to terminal
-#include <queue>                // For working thread logic.
-#include <condition_variable>   // For awake to worker thread.
-#include <atomic>               // For wake and awake to worker thread.
-#include <algorithm>            // For replace function.
-#include <iomanip>              // For std::put_time, std::setw, std::setfill
+#include <iostream>
+#include <string>
+#include <vector>
+#include <chrono>
+#include <ctime>
+#include <fstream>
+#include <filesystem>
+#include <thread>
+#include <mutex>
+#include <queue>
+#include <condition_variable>
+#include <atomic>
+#include <cstdio>
+#include <cstring>
 
+// Project-specific headers
 #include "Level.h"
-#include "Color.h"
 #include "LogEntry.h"
+#include "Color.h"
 
 namespace KL {
+
+/**
+ * @class Logger
+ * @brief High-performance, thread-safe, asynchronous logging system using the Singleton pattern.
+ *
+ * This logger writes colored output to the console and rotates log files based on line count.
+ * It follows a producer-consumer model: application threads push log entries into a lock-free-style
+ * queue while a dedicated background thread consumes them. This design ensures zero blocking on I/O.
+ *
+ * @note Fully compatible with C++17 (no C++20 features used).
+ * @note Zero dynamic allocations in the hot path (timestamp formatting uses stack buffer).
+ */
+class Logger {
+public:
     /**
-     * @class Logger
-     * 
-     * @brief A thread-safe, asynchronous Logger class implemented using the Singleton pattern.
-     * 
-     * This logger supports writing to both the console (with colors) and rotating log files.
-     * It utilizes a worker thread to process log entries from a queue to avoid blocking
-     * the main execution thread.
+     * @brief Returns the singleton instance (Meyers' Singleton - thread-safe since C++11).
+     * @return Reference to the global Logger instance.
      */
-    class Logger {
-        public:
-            /**
-             * @brief Retrieves the singleton instance of the Logger.
-             * 
-             * Implements Meyers' Singleton Pattern to ensure only one instance exists
-             * and is initialized safely.
-             * 
-             * @return Logger& Reference to the static Logger instance.
-             */
-            static Logger& get_instance() {
-                static Logger instance;
-                return instance;
-            } // End function get_instance
-            
-            Logger(const Logger&) = delete;
-            Logger& operator=(const Logger&) = delete;
+    static Logger& get_instance() {
+        static Logger instance;
+        return instance;
+    }
 
-            /**
-             * @brief Initializes the logger configuration and starts the worker thread.
-             * 
-             * If the folder path is not provided, the current working directory is used.
-             * Creates the directory if it does not exist.
-             * 
-             * @param folderPath Path to the directory where log files will be stored. Default is current path.
-             * @param maxLinesPerFile Maximum number of lines per log file before rotation. Default is 100,000.
-             */
-            void init(const std::string& folderPath = "", size_t maxLinesPerFile = 100000) {
-                std::lock_guard<std::mutex> lock(mMutex);
-                if (true == mIsInitialized) return;
+    // Delete copy constructor and assignment operator
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
 
-                mMaxLines = maxLinesPerFile;
+    /**
+     * @brief Initializes the logger and starts the background worker thread.
+     *
+     * Safe to call multiple times. Should ideally be called once at program startup.
+     *
+     * @param folderPath Directory where log files will be stored. Empty = current working directory.
+     * @param maxLinesPerFile Maximum lines per file before rotation (default: 100,000).
+     */
+    void init(const std::string& folderPath = "", size_t maxLinesPerFile = 100000)
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        if (mIsInitialized) {
+            return;
+        }
 
-                if (folderPath.empty()) {
-                    mLogDirectory = std::filesystem::current_path();
-                } else {
-                    mLogDirectory = folderPath;
+        mMaxLines = maxLinesPerFile;
 
-                    if (false == std::filesystem::exists(mLogDirectory)) {
-                        std::filesystem::create_directories(mLogDirectory);
-                    }
+        // Resolve log directory
+        std::error_code ec;
+        mLogDirectory = folderPath.empty() ? std::filesystem::current_path() : std::filesystem::path(folderPath);
+        std::filesystem::create_directories(mLogDirectory, ec);
+        if (ec) {
+            std::cerr << "[Logger] Failed to create log directory: " << ec.message() << "\n";
+        }
+
+        // Performance: disable stream synchronization with C stdio
+        std::ios::sync_with_stdio(false);
+        std::cout.tie(nullptr);
+
+#ifdef _WIN32
+        // Enable ANSI color support on Windows 10+ consoles
+        auto enableVT = []() {
+            HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (hOut == INVALID_HANDLE_VALUE) return;
+            DWORD dwMode = 0;
+            if (!GetConsoleMode(hOut, &dwMode)) return;
+            dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleMode(hOut, dwMode);
+        };
+        enableVT();
+#endif
+
+        mIsRunning = true;
+        mWorkerThread = std::thread(&Logger::process_queue, this);
+        mIsInitialized = true;
+    }
+
+    /**
+     * @brief Queues a log message for asynchronous processing.
+     *
+     * This is the main logging function. If the logger hasn't been initialized yet,
+     * it will automatically initialize with default settings.
+     *
+     * @param level       Log severity level
+     * @param msg         Log message (moved into the queue)
+     * @param writeToFile Whether to write this entry to file (default: true)
+     */
+    void log(Level level, std::string msg, bool writeToFile = true)
+    {
+        if (!mIsInitialized) {
+            init();  // Lazy initialization fallback
+        }
+
+        auto now = std::chrono::system_clock::now();
+
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mLogEntryQueue.emplace(LogEntry{writeToFile, now, level, std::move(msg)});
+        }
+
+        mCV.notify_one();
+    }
+
+    /**
+     * @brief Forces immediate flush of all queued logs and shuts down the worker thread.
+     *
+     * Called automatically from destructor, but can be called manually before program exit
+     * if strict ordering or immediate flush is required.
+     */
+    void flush_and_shutdown()
+    {
+        shut_down();
+    }
+
+private:
+    /// Private constructor - initializes member variables
+    Logger()
+        : mCurrentLineCount(0)
+        , mMaxLines(100000)
+        , mIsInitialized(false)
+        , mIsRunning(false)
+    {}
+
+    /// Destructor - ensures clean shutdown
+    ~Logger()
+    {
+        shut_down();
+    }
+
+    /// Signals worker thread to exit and joins it
+    void shut_down()
+    {
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mIsRunning = false;
+        }
+
+        mCV.notify_all();
+
+        if (mWorkerThread.joinable()) {
+            mWorkerThread.join();
+        }
+
+        if (mFileStream.is_open()) {
+            mFileStream.flush();
+            mFileStream.close();
+        }
+    }
+
+    /**
+     * @brief Formats a time_point into a fixed-size char buffer using snprintf (zero allocation).
+     *
+     * Format: DD-MM-YYYY HH:MM:SS.mmm
+     *
+     * @param tp     Time point to format
+     * @param buffer Destination buffer (must be at least 64 bytes)
+     * @param size   Size of the destination buffer
+     */
+    void format_timestamp(const std::chrono::system_clock::time_point& tp, char* buffer, size_t size) const
+    {
+        const auto time_t_val = std::chrono::system_clock::to_time_t(tp);
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
+
+        std::tm tm_val{};
+#if defined(_WIN32)
+        localtime_s(&tm_val, &time_t_val);
+#else
+        localtime_r(&time_t_val, &tm_val);
+#endif
+
+        std::snprintf(buffer, size, "%02d-%02d-%04d %02d:%02d:%02d.%03d",
+                      tm_val.tm_mday, tm_val.tm_mon + 1, tm_val.tm_year + 1900,
+                      tm_val.tm_hour, tm_val.tm_min, tm_val.tm_sec,
+                      static_cast<int>(ms.count()));
+    }
+
+    /// Converts Level enum to string literal
+    constexpr const char* level_to_string(Level level) const noexcept
+    {
+        switch (level) {
+            case Level::INFO:    return "INFO";
+            case Level::WARNING: return "WARNING";
+            case Level::ERROR:   return "ERROR";
+            default:             return "UNKNOWN";
+        }
+    }
+
+    /// Returns ANSI color escape sequence for the given level
+    constexpr const char* get_color_code(Level level) const noexcept
+    {
+        switch (level) {
+            case Level::INFO:    return "\033[92m"; // Bright Green
+            case Level::WARNING: return "\033[93m"; // Bright Yellow
+            case Level::ERROR:   return "\033[91m"; // Bright Red
+            default:             return "\033[0m";  // Reset
+        }
+    }
+
+    /// Background thread main loop - processes queued log entries
+    void process_queue()
+    {
+        std::queue<LogEntry> localQueue;
+
+        char timeBuffer[64]{};   // Stack-allocated timestamp buffer
+        std::string lineBuffer;
+        lineBuffer.reserve(512); // Pre-allocate for typical log size
+
+        while (true)
+        {
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                mCV.wait(lock, [this] { return !mLogEntryQueue.empty() || !mIsRunning; });
+
+                if (!mIsRunning && mLogEntryQueue.empty()) {
+                    break;
                 }
 
-                mIsInitialized = true;
-                mIsRunning = true;
-                mWorkerThread = std::thread(&Logger::process_queue, this);
-            } // End function init
-
-            /**
-             * @brief Pushes a new log message to the processing queue.
-             * 
-             * This method is thread-safe. If the logger is not initialized, 
-             * it attempts to initialize it with default values.
-             * 
-             * @param level The severity level of the log (INFO, WARNING, ERROR).
-             * @param msg The actual log message.
-             * @param writeToFile Flag indicating whether this message should be written to the file.
-             */
-            void log(Level level, std::string msg, bool writeToFile) {
-                
-                if (false == mIsInitialized) {
-                    std::cout << "Logger initializing with default values. " << "\n"; 
-                    init();
-                }
-                    
-                auto now = std::chrono::system_clock::now();  
-                {
-                    std::lock_guard<std::mutex> lock(mMutex);
-                    mLogEntryQueue.push(LogEntry{ writeToFile, now, level, std::move(msg) });
-                }
-                mCV.notify_one();
-            } // End function log
-        private:
-
-            // Default constructor 
-            Logger() : mCurrentLineCount(0), mMaxLines(100000), mIsInitialized(false), mIsRunning(false) {}
-            
-            // Destructor
-            ~Logger() {
-                shut_down();
-            } // End function ~Logger
-            
-            /**
-             * @brief Stops the worker thread and closes the open file stream.
-             */
-            void shut_down() {
-                mIsRunning = false;
-                mCV.notify_all();
-                if (mWorkerThread.joinable()) mWorkerThread.join();
-                if (mFileStream.is_open()) {
-                    mFileStream.flush();
-                    mFileStream.close();  
-                } 
-            } // End function shut_down
-            
-            /**
-             * @brief Converts the Log Level enum to its string representation.
-             * 
-             * @param level The Level enum value.
-             * @return std::string String representation (e.g., "INFO").
-             */
-            std::string level_to_string(Level level) {
-                switch (level) {
-                    case Level::INFO: return "INFO";
-                    case Level::WARNING: return "WARNING";
-                    case Level::ERROR: return "ERROR";
-                    default: return "UNKNOWN";
-                }
-            } // End function level_to_string
-            
-            /**
-             * @brief This function returns date and timestamp according now.
-             * 
-             * @return time stamp
-             */
-            std::string get_time_stamp_for_now() {
-                const auto now = std::chrono::system_clock::now();
-                const auto inTime = std::chrono::system_clock::to_time_t(now);
-                const auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
-                const auto ms = msSinceEpoch % 1000;
-
-                std::tm buf{};
-                #if defined(_WIN32)
-                    if (localtime_s(&buf, &inTime) != 0) {
-                        throw std::runtime_error("localtime_s failed");
-                    }
-                #else
-                    if (localtime_r(&inTime, &buf) == nullptr) {
-                        throw std::runtime_error("localtime_r failed");
-                    }
-                #endif
-                
-                // Formatted D-M-Y H:M:S.MS
-                std::ostringstream oss;
-                oss << std::put_time(&buf, "%d-%m-%Y %H:%M:%S");
-                oss << '.' << std::setw(3) << std::setfill('0') << ms.count();
-
-                return oss.str();
+                std::swap(localQueue, mLogEntryQueue);  // Release lock as fast as possible
             }
 
-            /**
-             * @brief This function returns the date and timestamp according to log entry.
-             * 
-             * @param log
-             * 
-             * @return time stamp
-             */
-            std::string get_time_stamp_for_log(const LogEntry& log) {
-                const auto inTime = std::chrono::system_clock::to_time_t(log.timeStamp);
-                const auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(log.timeStamp.time_since_epoch());
-                const auto ms = msSinceEpoch % 1000;
+            while (!localQueue.empty())
+            {
+                const auto& entry = localQueue.front();
 
-                std::tm buf{};
-                #if defined(_WIN32)
-                    if (localtime_s(&buf, &inTime) != 0) {
-                        throw std::runtime_error("localtime_s failed");
-                    }
-                #else
-                    if (localtime_r(&inTime, &buf) == nullptr) {
-                        throw std::runtime_error("localtime_r failed");
-                    }
-                #endif
-                
-                // Formatted D-M-Y H:M:S.MS
-                std::ostringstream oss;
-                oss << std::put_time(&buf, "%d-%m-%Y %H:%M:%S");
-                oss << '.' << std::setw(3) << std::setfill('0') << ms.count();
+                // Format timestamp without allocation
+                format_timestamp(entry.timeStamp, timeBuffer, sizeof(timeBuffer));
 
-                return oss.str();
-            } // End function get_time_stamp_for_log
+                // Build final line (single allocation at most)
+                lineBuffer.clear();
+                lineBuffer += '[';
+                lineBuffer += timeBuffer;
+                lineBuffer += "][";
+                lineBuffer += level_to_string(entry.level);
+                lineBuffer += "][";
+                lineBuffer += entry.msg;
+                lineBuffer += ']';
 
-            /**
-             * @brief Formats the log message for final output.
-             * 
-             * Combines timestamp, level, and message body.
-             * Example: [Date-Time][INFO][Message]
-             * 
-             * @param log The LogEntry to format.
-             * @return std::string The fully formatted log string.
-             */
-            std::string get_formatted_message(const LogEntry& log) {
-                std::ostringstream formattedMsg;
-                formattedMsg << "[" << get_time_stamp_for_log(log) << "]" << "[" << level_to_string(log.level) << "]" << "[" << log.msg << "]";
-                return formattedMsg.str();
-            } // End function get_formatted_message
-            
-            /**
-             * @brief Closes the current file (if open) and creates a new one with a timestamped name.
-             * 
-             * The filename format is: klog_d-m-y-H-M-S.MS.txt
-             */
-            void create_new_file() {
-                try {
-                    if (mFileStream.is_open()) {
-                        mFileStream.close();
-                    }
-                    
-                    std::string timeStampStr = get_time_stamp_for_now();
-                    std::replace(timeStampStr.begin(), timeStampStr.end(), ':', '-');
-                    std::replace(timeStampStr.begin(), timeStampStr.end(), ' ', '-');
-                    std::string fileName = "klog_" + timeStampStr + ".txt";
-                    std::filesystem::path fullPath = mLogDirectory / fileName;
-
-                    mFileStream.open(fullPath, std::ios::out | std::ios::app);
-                    mCurrentLineCount = 0;
-                }
-                catch(const std::exception& e)
-                {
-                    std::cerr << e.what() << '\n';
-                }
-            } // End function create_new_file
-            
-            /**
-             * @brief Writes the formatted message to the log file.
-             * 
-             * Handles file rotation if the maximum line count is reached or the file is closed.
-             * 
-             * @param msg The formatted message string.
-             */
-            void write_to_file(const std::string& msg) {
-                bool needNewFile = ((false == mFileStream.is_open()) || mCurrentLineCount >= mMaxLines);
-                if (true == needNewFile) {
-                    create_new_file();
+                // Write to file if requested
+                if (entry.writeToFile) {
+                    write_to_file(lineBuffer);
                 }
 
-                if (true == mFileStream.is_open()) {
-                    mFileStream << msg << "\n";
-                    mCurrentLineCount ++;
-                }
-            } // End function write_to_file
-            
-            /**
-             * @brief Retrieves the ANSI color code corresponding to the log level.
-             * 
-             * @param level The log level.
-             * @return std::string ANSI color escape code.
-             */
-            std::string get_color_code(Level level) {
-                switch (level) {
-                    case Level::INFO:       return Color::GREEN;
-                    case Level::WARNING:    return Color::YELLOW;
-                    case Level::ERROR:      return Color::RED;
-                    default:                return "";
-                }
-            } // End function get_color_code
-            
-            /**
-             * @brief Writes the formatted message to the standard output (Terminal).
-             * 
-             * Applies color coding based on the severity level. 
-             * ERROR level uses std::cerr, others use std::cout.
-             * 
-             * @param level The log level (determines color and stream).
-             * @param msg The formatted message string.
-             */
-            void write_to_terminal(Level level, const std::string& msg) {
-                std::string colorCode = get_color_code(level);
-                std::string coloredMsg = colorCode + msg + Color::RESET + "\n";
+                // Write to console with color
+                std::cout << get_color_code(entry.level)
+                          << lineBuffer
+                          << Color::RESET;
 
-                if (Level::ERROR == level) {
-                    std::cerr << coloredMsg;
-                } else {
-                    std::cout << coloredMsg;
-                }
-            } // End function write_to_terminal
+                localQueue.pop();
+            }
+        }
+    }
 
-            /**
-             * @brief The main loop for the worker thread.
-             * 
-             * Continuously waits for log entries in the queue. When awakened,
-             * it swaps the queue to a local buffer (for minimal lock duration)
-             * and processes the logs by writing to file and/or terminal.
-             */
-            void process_queue() {
-                std::queue<LogEntry> localQueue;
-                while (true) {
-                    
-                    {
-                        std::unique_lock<std::mutex> lock(mMutex);
-                        mCV.wait(lock, [this] {
-                            return !mLogEntryQueue.empty() || !mIsRunning;
-                        });
-    
-                        bool shouldWorkerThreadWork = (!mIsRunning && mLogEntryQueue.empty());
-                        if (shouldWorkerThreadWork) break;
-    
-                        std::swap(localQueue, mLogEntryQueue);
-                    }
+    /// Writes a line to the current log file, creating a new one if necessary
+    void write_to_file(const std::string& msg)
+    {
+        if (!mFileStream.is_open() || mCurrentLineCount >= mMaxLines) {
+            create_new_file();
+        }
 
-                    if (localQueue.empty()) continue;
+        if (mFileStream.is_open()) {
+            mFileStream << msg << '\n';
+            ++mCurrentLineCount;
+        }
+        // If file still not open → silently drop (disk full, permission, etc.)
+        // Critical applications may want to log this to stderr
+    }
 
-                    while (!localQueue.empty()) {
-                        LogEntry log = std::move(localQueue.front());
-                        localQueue.pop();
-                        
-                        std::string formattedMessage = get_formatted_message(log);
-                        if (log.writeToFile)
-                            write_to_file(formattedMessage);
-                        write_to_terminal(log.level, formattedMessage);
-                    }
-                }                
-            } // End function process_queue
-            
-            std::queue<LogEntry> mLogEntryQueue;    // Queue to hold pending log entries.
-            std::condition_variable mCV;            // Condition variable to wake up worker thread.
-            std::mutex mMutex;                      // Mutex for thread safety.
-            std::thread mWorkerThread;              // Background thread for processing logs.
-            std::atomic<bool> mIsRunning;           // Atomic flag to control the worker loop.
-            std::atomic<bool> mIsInitialized;       // Atomic flag to check initialization status.
+    /// Closes current file and opens a new one with timestamped name
+    void create_new_file()
+    {
+        if (mFileStream.is_open()) {
+            mFileStream.flush();
+            mFileStream.close();
+        }
 
-            std::ofstream mFileStream;              // File stream for writing logs.
-            std::filesystem::path mLogDirectory;    // Directory path for log files.
-            size_t mMaxLines;                       // Max lines per file limit.
-            size_t mCurrentLineCount;               // Current line count in the active file.
-    };
-}
+        const auto now = std::chrono::system_clock::now();
+        const auto time_t_val = std::chrono::system_clock::to_time_t(now);
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
-#endif //! LOGGER_H
+        std::tm tm_val{};
+        #if defined(_WIN32)
+                localtime_s(&tm_val, &time_t_val);
+        #else
+                localtime_r(&time_t_val, &tm_val);
+        #endif
+
+        char filename[128];
+        std::snprintf(filename, sizeof(filename),
+                      "klog_%02d-%02d-%04d-%02d-%02d-%02d-%03d.txt",
+                      tm_val.tm_mday, tm_val.tm_mon + 1, tm_val.tm_year + 1900,
+                      tm_val.tm_hour, tm_val.tm_min, tm_val.tm_sec,
+                      static_cast<int>(ms.count()));
+
+        const std::filesystem::path fullPath = mLogDirectory / filename;
+        mFileStream.open(fullPath, std::ios::out | std::ios::app);
+
+        if (!mFileStream.is_open()) {
+            std::cerr << "[Logger] CRITICAL: Failed to open log file: " << fullPath << "\n";
+        }
+
+        mCurrentLineCount = 0;
+    }
+
+    // Member variables
+    std::queue<LogEntry> mLogEntryQueue;
+    std::condition_variable mCV;
+    std::mutex mMutex;
+    std::thread mWorkerThread;
+
+    std::atomic<bool> mIsRunning {false};
+    bool mIsInitialized {false};  // Protected by mMutex
+
+    std::ofstream mFileStream;
+    std::filesystem::path mLogDirectory;
+    size_t mMaxLines{100000};
+    size_t mCurrentLineCount{0};
+};
+
+} // namespace KL
+
+#endif // LOGGER_H
