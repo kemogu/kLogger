@@ -245,6 +245,7 @@ private:
             while (!localQueue.empty())
             {
                 const auto& entry = localQueue.front();
+                const Level& level = entry.level;
 
                 // Format timestamp without allocation
                 format_timestamp(entry.timeStamp, timeBuffer, sizeof(timeBuffer));
@@ -254,7 +255,7 @@ private:
                 lineBuffer += '[';
                 lineBuffer += timeBuffer;
                 lineBuffer += "][";
-                lineBuffer += level_to_string(entry.level);
+                lineBuffer += level_to_string(level);
                 lineBuffer += "][";
                 lineBuffer += entry.msg;
                 lineBuffer += ']';
@@ -265,9 +266,12 @@ private:
                 }
 
                 // Write to console with color
-                std::cout << get_color_code(entry.level)
-                          << lineBuffer
-                          << Color::RESET;
+                if (Level::ERROR == level) {
+                    std::cerr << get_color_code(level) << lineBuffer << Color::RESET << std::endl;
+                }
+                else {
+                    std::cout << get_color_code(level) << lineBuffer << Color::RESET << "\n";
+                }
 
                 localQueue.pop();
             }
