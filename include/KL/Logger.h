@@ -186,11 +186,11 @@ private:
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()) % 1000;
 
         std::tm tm_val{};
-#if defined(_WIN32)
-        localtime_s(&tm_val, &time_t_val);
-#else
-        localtime_r(&time_t_val, &tm_val);
-#endif
+        #if defined(_WIN32)
+                localtime_s(&tm_val, &time_t_val);
+        #else
+                localtime_r(&time_t_val, &tm_val);
+        #endif
 
         std::snprintf(buffer, size, "%02d-%02d-%04d %02d:%02d:%02d.%03d",
                       tm_val.tm_mday, tm_val.tm_mon + 1, tm_val.tm_year + 1900,
