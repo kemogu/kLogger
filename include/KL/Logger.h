@@ -74,7 +74,7 @@ public:
         mLogDirectory = folderPath.empty() ? std::filesystem::current_path() : std::filesystem::path(folderPath);
         std::filesystem::create_directories(mLogDirectory, ec);
         if (ec) {
-            std::cerr << "[Logger] Failed to create log directory: " << ec.message() << "\n";
+            std::cerr << "[Logger] Failed to create log directory: " << ec.message() << std::endl;
         }
 
         // Performance: disable stream synchronization with C stdio
@@ -319,7 +319,7 @@ private:
         mFileStream.open(fullPath, std::ios::out | std::ios::app);
 
         if (!mFileStream.is_open()) {
-            std::cerr << "[Logger] CRITICAL: Failed to open log file: " << fullPath << "\n";
+            std::cerr << "[Logger] CRITICAL: Failed to open log file: " << fullPath << std::endl;
         }
 
         mCurrentLineCount = 0;
