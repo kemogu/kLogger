@@ -17,6 +17,16 @@
 #include <cstring>
 #include <csignal>
 
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+    #include <io.h>  // _write için
+#else
+    #include <unistd.h>  // write, STDOUT_FILENO için
+#endif
+
 // Project-specific headers
 #include "Level.h"
 #include "LogEntry.h"
