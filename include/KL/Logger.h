@@ -16,6 +16,9 @@
 #include <cstdio>
 #include <cstring>
 
+// TODO: Solve multithread crashing.
+// TODO: Add automatic flush().
+
 // Project-specific headers
 #include "Level.h"
 #include "LogEntry.h"
