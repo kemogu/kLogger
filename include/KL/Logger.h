@@ -81,18 +81,18 @@ public:
         std::ios::sync_with_stdio(false);
         std::cout.tie(nullptr);
 
-#ifdef _WIN32
-        // Enable ANSI color support on Windows 10+ consoles
-        auto enableVT = []() {
-            HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-            if (hOut == INVALID_HANDLE_VALUE) return;
-            DWORD dwMode = 0;
-            if (!GetConsoleMode(hOut, &dwMode)) return;
-            dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-            SetConsoleMode(hOut, dwMode);
-        };
-        enableVT();
-#endif
+        #ifdef _WIN32
+            // Enable ANSI color support on Windows 10+ consoles
+            auto enableVT = []() {
+                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                if (hOut == INVALID_HANDLE_VALUE) return;
+                DWORD dwMode = 0;
+                if (!GetConsoleMode(hOut, &dwMode)) return;
+                dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+                SetConsoleMode(hOut, dwMode);
+            };
+            enableVT();
+        #endif
 
         mIsRunning = true;
         mWorkerThread = std::thread(&Logger::process_queue, this);
