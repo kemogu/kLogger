@@ -27,6 +27,9 @@
     #include <unistd.h>  // write, STDOUT_FILENO için
 #endif
 
+// TODO: Fix Signal Handler Undefined Behaviour
+// TODO: Fix Atomic/Mutex Data Race
+
 // Project-specific headers
 #include "Level.h"
 #include "LogEntry.h"
