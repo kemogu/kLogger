@@ -15,8 +15,7 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
-
-// TODO: Add automatic flush().
+#include <csignal>
 
 // Project-specific headers
 #include "Level.h"
@@ -89,6 +88,8 @@ public:
                 };
                 enableVT();
             #endif
+
+            setup_signal_handlers();
 
             mIsRunning = true;
             mWorkerThread = std::thread(&Logger::process_queue, this);
@@ -163,6 +164,34 @@ private:
             mFileStream.flush();
             mFileStream.close();
         }
+    }
+
+    void setup_signal_handlers() {
+        std::signal(SIGSEGV, signal_handler); // Segmentation fault
+        std::signal(SIGABRT, signal_handler); // Abort
+        std::signal(SIGFPE,  signal_handler); // Floating point exception
+        std::signal(SIGILL,  signal_handler); // Illegal instruction
+    }
+
+    void emergency_flush() {
+        if (mFileStream.is_open()) {
+            mFileStream.flush();
+        }
+    }
+
+    static void signal_handler(int signal_num) {
+        const char* msg = "\nProgram crashed! Flushing logs...\n";
+        
+        #ifdef _WIN32
+            _write(1, msg, (unsigned int)strlen(msg));
+        #else
+            write(STDOUT_FILENO, msg, strlen(msg));
+        #endif
+
+        get_instance().emergency_flush();
+
+        std::signal(signal_num, SIG_DFL);
+        std::raise(signal_num);
     }
 
     /**
