@@ -6,10 +6,10 @@
 namespace KL {
     namespace Color {
         // ANSI escape codes.
-        static const std::string RED     = "\033[31m";
-        static const std::string GREEN   = "\033[32m";
-        static const std::string YELLOW  = "\033[33m";
-        static const std::string RESET   = "\033[0m";
+        inline constexpr const char* RED     = "\033[31m";
+        inline constexpr const char* GREEN   = "\033[32m";
+        inline constexpr const char* YELLOW  = "\033[33m";
+        inline constexpr const char* RESET   = "\033[0m";
     };
 }
 
