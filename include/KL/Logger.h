@@ -16,7 +16,6 @@
 #include <cstdio>
 #include <cstring>
 
-// TODO: Solve multithread crashing.
 // TODO: Add automatic flush().
 
 // Project-specific headers
@@ -62,41 +61,38 @@ public:
      */
     void init(const std::string& folderPath = "", size_t maxLinesPerFile = 100000)
     {
-        std::lock_guard<std::mutex> lock(mMutex);
-        if (mIsInitialized) {
-            return;
-        }
+        
+        std::call_once(mInitFlag, [this, folderPath, maxLinesPerFile](){
+            mMaxLines = maxLinesPerFile;
 
-        mMaxLines = maxLinesPerFile;
+            // Resolve log directory
+            std::error_code ec;
+            mLogDirectory = folderPath.empty() ? std::filesystem::current_path() : std::filesystem::path(folderPath);
+            std::filesystem::create_directories(mLogDirectory, ec);
+            if (ec) {
+                std::cerr << "[Logger] Failed to create log directory: " << ec.message() << std::endl;
+            }
 
-        // Resolve log directory
-        std::error_code ec;
-        mLogDirectory = folderPath.empty() ? std::filesystem::current_path() : std::filesystem::path(folderPath);
-        std::filesystem::create_directories(mLogDirectory, ec);
-        if (ec) {
-            std::cerr << "[Logger] Failed to create log directory: " << ec.message() << std::endl;
-        }
+            // Performance: disable stream synchronization with C stdio
+            std::ios::sync_with_stdio(false);
+            std::cout.tie(nullptr);
 
-        // Performance: disable stream synchronization with C stdio
-        std::ios::sync_with_stdio(false);
-        std::cout.tie(nullptr);
+            #ifdef _WIN32
+                // Enable ANSI color support on Windows 10+ consoles
+                auto enableVT = []() {
+                    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                    if (hOut == INVALID_HANDLE_VALUE) return;
+                    DWORD dwMode = 0;
+                    if (!GetConsoleMode(hOut, &dwMode)) return;
+                    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+                    SetConsoleMode(hOut, dwMode);
+                };
+                enableVT();
+            #endif
 
-        #ifdef _WIN32
-            // Enable ANSI color support on Windows 10+ consoles
-            auto enableVT = []() {
-                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-                if (hOut == INVALID_HANDLE_VALUE) return;
-                DWORD dwMode = 0;
-                if (!GetConsoleMode(hOut, &dwMode)) return;
-                dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-                SetConsoleMode(hOut, dwMode);
-            };
-            enableVT();
-        #endif
-
-        mIsRunning = true;
-        mWorkerThread = std::thread(&Logger::process_queue, this);
-        mIsInitialized = true;
+            mIsRunning = true;
+            mWorkerThread = std::thread(&Logger::process_queue, this);
+        });        
     }
 
     /**
@@ -111,9 +107,8 @@ public:
      */
     void log(Level level, std::string msg, bool writeToFile = true)
     {
-        if (!mIsInitialized) {
-            init();  // Lazy initialization fallback
-        }
+
+        init();
 
         auto now = std::chrono::system_clock::now();
 
@@ -141,7 +136,6 @@ private:
     Logger()
         : mCurrentLineCount(0)
         , mMaxLines(100000)
-        , mIsInitialized(false)
         , mIsRunning(false)
     {}
 
@@ -336,7 +330,7 @@ private:
     std::thread mWorkerThread;
 
     std::atomic<bool> mIsRunning {false};
-    bool mIsInitialized {false};  // Protected by mMutex
+    std::once_flag mInitFlag;
 
     std::ofstream mFileStream;
     std::filesystem::path mLogDirectory;
